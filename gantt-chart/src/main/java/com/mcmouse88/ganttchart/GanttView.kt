@@ -3,9 +3,11 @@ package com.mcmouse88.ganttchart
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
+import android.graphics.Shader
 import android.util.AttributeSet
 import android.view.View
 import androidx.core.content.ContextCompat
@@ -36,7 +38,6 @@ class GanttView @JvmOverloads constructor(
     // For task shapes
     private val taskShapePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = ContextCompat.getColor(context, R.color.blue_700)
     }
 
     // For task names
@@ -65,6 +66,10 @@ class GanttView @JvmOverloads constructor(
         ContextCompat.getColor(context, R.color.grey_100),
         Color.WHITE
     )
+
+    // Gradient colors
+    private val gradientStartColor = ContextCompat.getColor(context, R.color.blue_700)
+    private val gradientEndColor = ContextCompat.getColor(context, R.color.blue_200)
 
     private val contentWidth: Int
         get() = periodWidth * periods.getValue(periodType).size
@@ -119,6 +124,18 @@ class GanttView @JvmOverloads constructor(
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         // Size has been changed, it's necessary to recalculate row width
         rowRect.set(0, 0, w, rowHeight)
+
+        // And gradient size
+        taskShapePaint.shader = LinearGradient(
+            0f,
+            0f,
+            w.toFloat(),
+            0f,
+            gradientStartColor,
+            gradientEndColor,
+            Shader.TileMode.CLAMP
+        )
+
         // And tasks rect
         updateTasksRects()
     }
@@ -188,8 +205,7 @@ class GanttView @JvmOverloads constructor(
                     taskRect.width() - taskTextHorizontalMargin * 2,
                     null
                 )
-//                drawText(taskName.substring(startIndex = 0, endIndex = charCount), textX, textY, taskNamePaint)
-                drawText(taskName, textX, textY, taskNamePaint)
+                drawText(taskName.substring(startIndex = 0, endIndex = charCount), textX, textY, taskNamePaint)
             }
         }
     }
