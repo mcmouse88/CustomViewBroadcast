@@ -1,21 +1,17 @@
 package com.mcmouse88.ganttchart
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffXfermode
+import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Shader
 import android.util.AttributeSet
 import android.view.View
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.applyCanvas
-import androidx.core.graphics.createBitmap
 import java.time.LocalDate
 import java.time.temporal.IsoFields
 
@@ -49,11 +45,6 @@ class GanttView @JvmOverloads constructor(
     private val taskNamePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = resources.getDimension(R.dimen.gantt_task_name_text_size)
         color = Color.WHITE
-    }
-
-    // For cutting off a semicircle from the task
-    private val cutOutPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_OUT)
     }
 
     // Column width with the period
@@ -90,8 +81,8 @@ class GanttView @JvmOverloads constructor(
     // Rect for drawing rows
     private val rowRect = Rect()
 
-    // Bitmap for task shapes
-    private lateinit var tasksBitmap: Bitmap
+    // Path for task shapes
+    private val tasksPath = Path()
 
     private val today = LocalDate.now()
 
@@ -105,7 +96,7 @@ class GanttView @JvmOverloads constructor(
         if (tasks != this.tasks) {
             this.tasks = tasks
             uiTasks = tasks.map(::UiTask)
-            updateTasksBitmap()
+            updateTasksPath()
 
             // Notify to recalculated sizes
             requestLayout()
@@ -154,32 +145,26 @@ class GanttView @JvmOverloads constructor(
             Shader.TileMode.CLAMP
         )
 
-        // And recreate Bitmap for task shapes
-        updateTasksBitmap()
+        // And path for tasks
+        updateTasksPath()
     }
 
-    private fun updateTasksBitmap() {
-        if (width == 0 || height == 0) return
-
-        tasksBitmap = createBitmap(width, height).applyCanvas {
-            uiTasks.forEachIndexed { index, uiTask ->
-                uiTask.updateRect(index)
-                if (uiTask.isRectOnScreen) {
-                    val taskRect = uiTask.rect
-                    // Task shape
-                    drawRoundRect(
-                        taskRect,
-                        taskCornerRadius,
-                        taskCornerRadius,
-                        taskShapePaint
-                    )
-                    // Cut out a piece from the shape
-                    drawCircle(
-                        taskRect.left,
-                        taskRect.centerY(),
-                        cutOutRadius,
-                        cutOutPaint
-                    )
+    private fun updateTasksPath() {
+        tasksPath.reset()
+        uiTasks.forEachIndexed { index, uiTask ->
+            uiTask.updateRect(index)
+            if (uiTask.isRectOnScreen) {
+                val rect = uiTask.rect
+                val circleTop = rect.top + rect.height() / 2 - cutOutRadius
+                val circleBottom = rect.bottom - (rect.height() / 2 - cutOutRadius)
+                with(tasksPath) {
+                    moveTo(rect.left, circleTop)
+                    lineTo(rect.left, rect.top)
+                    lineTo(rect.right, rect.top)
+                    lineTo(rect.right, rect.bottom)
+                    lineTo(rect.left, rect.bottom)
+                    lineTo(rect.left, circleBottom)
+                    quadTo(rect.left + cutOutRadius, rect.centerY(), rect.left, circleTop)
                 }
             }
         }
@@ -234,30 +219,28 @@ class GanttView @JvmOverloads constructor(
     }
 
     private fun Canvas.drawTasks() {
-        drawBitmap(tasksBitmap, 0f, 0f, rowPaint)
+        drawPath(tasksPath, taskShapePaint)
         uiTasks.forEach { uiTask ->
-            if (uiTask.isRectOnScreen) {
-                val taskRect = uiTask.rect
-                val taskName = uiTask.task.name
+            val taskRect = uiTask.rect
+            val taskName = uiTask.task.name
 
-                // Name position
-                val textX = taskRect.left + taskTextHorizontalMargin + cutOutRadius
-                val textY = taskNamePaint.getTextBaselineByCenter(taskRect.centerY())
+            // Name position
+            val textX = taskRect.left + taskTextHorizontalMargin + cutOutRadius
+            val textY = taskNamePaint.getTextBaselineByCenter(taskRect.centerY())
 
-                // Symbols count from text, which will fit in the shape
-                val charCount = taskNamePaint.breakText(
-                    taskName,
-                    true,
-                    taskRect.width() - taskTextHorizontalMargin * 2 - cutOutRadius,
-                    null
-                )
-                drawText(
-                    taskName.substring(startIndex = 0, endIndex = charCount),
-                    textX,
-                    textY,
-                    taskNamePaint
-                )
-            }
+            // Symbols count from text, which will fit in the shape
+            val charCount = taskNamePaint.breakText(
+                taskName,
+                true,
+                taskRect.width() - taskTextHorizontalMargin * 2 - cutOutRadius,
+                null
+            )
+            drawText(
+                taskName.substring(startIndex = 0, endIndex = charCount),
+                textX,
+                textY,
+                taskNamePaint
+            )
         }
     }
 
