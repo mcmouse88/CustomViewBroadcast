@@ -1,3 +1,5 @@
+@file:Suppress("UnstableApiUsage")
+
 pluginManagement {
     repositories {
         google()
@@ -14,5 +16,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "CustomViewBroadcast"
-include(":app")
- 
+include(":view-group")
+include(":gantt-chart")
