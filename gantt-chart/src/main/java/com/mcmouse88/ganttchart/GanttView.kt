@@ -84,6 +84,9 @@ class GanttView @JvmOverloads constructor(
     // Path for task shapes
     private val tasksPath = Path()
 
+    // Path for cutout circle
+    private val cutOutPath = Path()
+
     private val today = LocalDate.now()
 
     private var periodType = PeriodType.MONTH
@@ -151,23 +154,18 @@ class GanttView @JvmOverloads constructor(
 
     private fun updateTasksPath() {
         tasksPath.reset()
+        cutOutPath.reset()
         uiTasks.forEachIndexed { index, uiTask ->
             uiTask.updateRect(index)
             if (uiTask.isRectOnScreen) {
                 val rect = uiTask.rect
-                val circleTop = rect.top + rect.height() / 2 - cutOutRadius
-                val circleBottom = rect.bottom - (rect.height() / 2 - cutOutRadius)
-                with(tasksPath) {
-                    moveTo(rect.left, circleTop)
-                    lineTo(rect.left, rect.top)
-                    lineTo(rect.right, rect.top)
-                    lineTo(rect.right, rect.bottom)
-                    lineTo(rect.left, rect.bottom)
-                    lineTo(rect.left, circleBottom)
-                    quadTo(rect.left + cutOutRadius, rect.centerY(), rect.left, circleTop)
-                }
+                tasksPath.addRoundRect(rect, taskCornerRadius, taskCornerRadius, Path.Direction.CW)
+                cutOutPath.addCircle(rect.left, rect.centerY(), cutOutRadius, Path.Direction.CW)
             }
         }
+
+        // Cut off circles from task rects
+        tasksPath.op(cutOutPath, Path.Op.DIFFERENCE)
     }
 
     override fun onDraw(canvas: Canvas) = with(canvas) {
