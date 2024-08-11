@@ -29,14 +29,9 @@ class MainActivity : AppCompatActivity() {
                 dateEnd = now.plusMonths(2)
             ),
             Task(
-                name = "Some Task 4",
-                dateStart = now.plusWeeks(2),
-                dateEnd = now.plusMonths(2).plusWeeks(1)
-            ),
-            Task(
-                name = "Task 5",
-                dateStart = now.minusMonths(2).minusWeeks(1),
-                dateEnd = now.plusWeeks(1)
+                name = "Task 4",
+                dateStart = now.minusDays(1),
+                dateEnd = now.plusDays(1)
             )
         )
 
